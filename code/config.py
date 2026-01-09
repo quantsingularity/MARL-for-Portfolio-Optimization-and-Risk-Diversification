@@ -1,34 +1,34 @@
 """
-Configuration management for MADDPG Portfolio Optimization
-Complete implementation based on research paper specifications
+Configuration Management
+Adds support for Transformers, ESG, Dynamic Diversity, Multi-Asset Classes
 """
 
 import json
-from dataclasses import dataclass, asdict
-from typing import List, Dict, Any
-
+from dataclasses import dataclass, asdict, field
+from typing import List, Dict, Any, Optional
 
 @dataclass
 class EnvironmentConfig:
-    """Environment configuration matching paper specifications"""
-
-    n_agents: int = 4  # Tech, Healthcare, Finance, Energy/Commodities
-    n_assets: int = 30  # 30 S&P 500 stocks
-    initial_capital: float = 1_000_000  # $1M per agent
-    transaction_cost: float = 0.001  # 0.1% as per paper
-    risk_free_rate: float = 0.02 / 252  # Daily risk-free rate (2% annual)
-
-    # Diversity penalty weight (optimal from ablation study)
-    diversity_weight: float = 0.1  # λ = 0.1 (optimal)
-
-    # Rolling windows for calculations
-    correlation_window: int = 30  # 30-day window for diversity penalty
-    volatility_window: int = 20  # 20-day rolling volatility
-
-    # State space dimensions
-    lookback_short: int = 20  # Short-term historical returns
-    lookback_long: int = 60  # Long-term historical returns
-
+    """Environment configuration"""
+    n_agents: int = 4
+    n_assets: int = 30
+    initial_capital: float = 1_000_000
+    transaction_cost: float = 0.001
+    risk_free_rate: float = 0.02 / 252
+    
+    # Diversity settings
+    diversity_weight: float = 0.1
+    dynamic_diversity: bool = True  # NEW: Enable dynamic λ adjustment
+    diversity_weight_range: tuple = (0.05, 0.2)  # NEW: Range for dynamic λ
+    
+    # Rolling windows
+    correlation_window: int = 30
+    volatility_window: int = 20
+    
+    # State space
+    lookback_short: int = 20
+    lookback_long: int = 60
+    
     # Technical indicators
     rsi_period: int = 14
     macd_fast: int = 12
@@ -36,141 +36,195 @@ class EnvironmentConfig:
     macd_signal: int = 9
     bollinger_period: int = 20
     bollinger_std: float = 2.0
-
-    # Asset allocation per agent (from paper)
+    
+    # NEW: ESG Integration
+    use_esg: bool = True
+    esg_weight: float = 0.05
+    min_esg_score: float = 50.0
+    
+    # NEW: Sentiment Analysis
+    use_sentiment: bool = True
+    sentiment_weight: float = 0.03
+    
+    # NEW: Multi-Asset Class Support
+    asset_classes: List[str] = field(default_factory=lambda: ["equities"])
+    include_crypto: bool = False
+    include_bonds: bool = False
+    include_commodities: bool = True
+    
+    # Asset allocation
     sector_allocations: Dict[str, List[str]] = None
-
+    
     def __post_init__(self):
         if self.sector_allocations is None:
-            # Exact allocation from paper
             self.sector_allocations = {
-                "Tech": [
-                    "AAPL",
-                    "MSFT",
-                    "NVDA",
-                    "GOOGL",
-                    "META",
-                    "TSLA",
-                    "AVGO",
-                    "ADBE",
-                ],
+                "Tech": ["AAPL", "MSFT", "NVDA", "GOOGL", "META", "TSLA", "AVGO", "ADBE"],
                 "Healthcare": ["JNJ", "UNH", "PFE", "ABBV", "TMO", "MRK", "LLY"],
                 "Finance": ["JPM", "BAC", "V", "MA", "GS", "MS", "AXP"],
                 "Energy": ["XOM", "CVX", "COP", "SLB", "EOG", "PXD", "GLD", "SLV"],
             }
-
+            
+            # Add crypto if enabled
+            if self.include_crypto:
+                self.sector_allocations["Crypto"] = ["BTC-USD", "ETH-USD", "BNB-USD"]
+            
+            # Add bonds if enabled
+            if self.include_bonds:
+                self.sector_allocations["Bonds"] = ["TLT", "IEF", "SHY", "LQD"]
 
 @dataclass
 class NetworkConfig:
-    """Network architecture from paper Section 4.2"""
-
-    # Actor network: [256, 128, 64] with ReLU and BatchNorm
-    actor_hidden_dims: List[int] = None
+    """Enhanced network architecture configuration"""
+    # Actor network
+    actor_hidden_dims: List[int] = field(default_factory=lambda: [256, 128, 64])
     actor_activation: str = "relu"
     actor_use_batch_norm: bool = True
-    actor_output_activation: str = "softmax"  # Ensures weights sum to 1
-
-    # Critic network: [512, 256, 128] with ReLU and BatchNorm
-    critic_hidden_dims: List[int] = None
+    actor_output_activation: str = "softmax"
+    
+    # Critic network
+    critic_hidden_dims: List[int] = field(default_factory=lambda: [512, 256, 128])
     critic_activation: str = "relu"
     critic_use_batch_norm: bool = True
     critic_output_activation: str = "linear"
-
-    def __post_init__(self):
-        if self.actor_hidden_dims is None:
-            self.actor_hidden_dims = [256, 128, 64]
-        if self.critic_hidden_dims is None:
-            self.critic_hidden_dims = [512, 256, 128]
-
+    
+    # NEW: Transformer Architecture
+    use_transformer: bool = True
+    transformer_heads: int = 8
+    transformer_layers: int = 4
+    transformer_dim: int = 256
+    transformer_dropout: float = 0.1
+    
+    # NEW: Attention Mechanism
+    use_attention: bool = True
+    attention_heads: int = 4
 
 @dataclass
 class TrainingConfig:
-    """Training hyperparameters from paper Section 4.3"""
-
-    n_episodes: int = 300  # Training episodes
-    max_steps_per_episode: int = 252  # ~1 trading year
-
-    # Learning rates from paper
-    lr_actor: float = 1e-4  # Actor learning rate
-    lr_critic: float = 1e-3  # Critic learning rate
-
+    """Enhanced training configuration"""
+    n_episodes: int = 300
+    max_steps_per_episode: int = 252
+    
+    # Learning rates
+    lr_actor: float = 1e-4
+    lr_critic: float = 1e-3
+    
     # RL hyperparameters
-    gamma: float = 0.99  # Discount factor
-    tau: float = 0.01  # Polyak averaging rate for target networks
-    batch_size: int = 128  # Batch size from paper
-
+    gamma: float = 0.99
+    tau: float = 0.01
+    batch_size: int = 128
+    
     # Experience replay
-    buffer_size: int = 1_000_000  # Replay buffer size
-    min_buffer_size: int = 10000  # Minimum before training starts
-
+    buffer_size: int = 1_000_000
+    min_buffer_size: int = 10000
+    
     # Exploration
-    noise_std_start: float = 0.2  # Initial exploration noise
-    noise_std_end: float = 0.05  # Final exploration noise
-    noise_decay: float = 0.995  # Decay rate per episode
-
+    noise_std_start: float = 0.2
+    noise_std_end: float = 0.05
+    noise_decay: float = 0.995
+    
     # Training schedule
-    update_every: int = 1  # Update frequency
-    updates_per_step: int = 1  # Number of updates per step
-
+    update_every: int = 1
+    updates_per_step: int = 1
+    
     # Checkpointing
-    save_interval: int = 50  # Save model every N episodes
-    eval_interval: int = 10  # Evaluate every N episodes
+    save_interval: int = 50
+    eval_interval: int = 10
+    
+    # NEW: Hyperparameter Optimization
+    use_optuna: bool = False
+    optuna_trials: int = 50
+    
+    # NEW: Advanced Training Features
+    use_curriculum_learning: bool = False
+    use_prioritized_replay: bool = False
+    use_hindsight_replay: bool = False
 
+@dataclass
+class RiskManagementConfig:
+    """NEW: Risk management configuration"""
+    # Risk metrics
+    use_cvar: bool = True
+    cvar_alpha: float = 0.95
+    use_sortino: bool = True
+    target_return: float = 0.0
+    
+    # Position limits
+    max_position_size: float = 0.3
+    max_sector_exposure: float = 0.5
+    
+    # Stop loss/take profit
+    use_stop_loss: bool = True
+    stop_loss_threshold: float = -0.15
+    use_take_profit: bool = True
+    take_profit_threshold: float = 0.25
+    
+    # Market regime detection
+    use_regime_detection: bool = True
+    regime_indicators: List[str] = field(default_factory=lambda: ["vix", "yield_spread", "momentum"])
 
 @dataclass
 class DataConfig:
     """Data configuration"""
-
-    data_source: str = "yfinance"  # 'yfinance', 'synthetic', or 'csv'
-    start_date: str = "2017-01-01"  # Training start (paper: 2017-2024)
-    end_date: str = "2024-12-31"  # Training end
-    train_ratio: float = 0.75  # 75% train, 25% test (2017-2022 train, 2023-2024 test)
-
-    # CSV data path (if using custom data)
-    csv_path: str = None
-
+    data_source: str = "yfinance"
+    start_date: str = "2017-01-01"
+    end_date: str = "2024-12-31"
+    train_ratio: float = 0.75
+    csv_path: Optional[str] = None
+    
+    # NEW: Alternative Data Sources
+    use_alternative_data: bool = True
+    news_sources: List[str] = field(default_factory=lambda: ["reuters", "bloomberg"])
+    social_sentiment: bool = False
+    
+    # NEW: Real-time Data
+    use_realtime: bool = False
+    realtime_interval: int = 60  # seconds
 
 @dataclass
 class Config:
     """Master configuration class"""
-
-    env: EnvironmentConfig = None
-    network: NetworkConfig = None
-    training: TrainingConfig = None
-    data: DataConfig = None
-
-    # Experiment settings
+    env: EnvironmentConfig = field(default_factory=EnvironmentConfig)
+    network: NetworkConfig = field(default_factory=NetworkConfig)
+    training: TrainingConfig = field(default_factory=TrainingConfig)
+    risk: RiskManagementConfig = field(default_factory=RiskManagementConfig)
+    data: DataConfig = field(default_factory=DataConfig)
+    
     seed: int = 42
-    device: str = "cpu"  # 'cuda' or 'cpu'
-    num_workers: int = 4  # For data loading
-
-    def __post_init__(self):
-        if self.env is None:
-            self.env = EnvironmentConfig()
-        if self.network is None:
-            self.network = NetworkConfig()
-        if self.training is None:
-            self.training = TrainingConfig()
-        if self.data is None:
-            self.data = DataConfig()
-
+    device: str = "cpu"
+    num_workers: int = 4
+    
+    # NEW: Experiment Tracking
+    use_tensorboard: bool = True
+    use_wandb: bool = False
+    experiment_name: str = "enhanced_maddpg"
+    
+    # NEW: Interpretability
+    use_shap: bool = True
+    use_attention_visualization: bool = True
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary"""
         return {
             "env": asdict(self.env),
             "network": asdict(self.network),
             "training": asdict(self.training),
+            "risk": asdict(self.risk),
             "data": asdict(self.data),
             "seed": self.seed,
             "device": self.device,
             "num_workers": self.num_workers,
+            "use_tensorboard": self.use_tensorboard,
+            "use_wandb": self.use_wandb,
+            "experiment_name": self.experiment_name,
+            "use_shap": self.use_shap,
+            "use_attention_visualization": self.use_attention_visualization,
         }
-
+    
     def save(self, path: str):
         """Save configuration to JSON file"""
         with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
-
+    
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "Config":
         """Load configuration from dictionary"""
@@ -178,12 +232,18 @@ class Config:
         config.env = EnvironmentConfig(**config_dict.get("env", {}))
         config.network = NetworkConfig(**config_dict.get("network", {}))
         config.training = TrainingConfig(**config_dict.get("training", {}))
+        config.risk = RiskManagementConfig(**config_dict.get("risk", {}))
         config.data = DataConfig(**config_dict.get("data", {}))
         config.seed = config_dict.get("seed", 42)
         config.device = config_dict.get("device", "cpu")
         config.num_workers = config_dict.get("num_workers", 4)
+        config.use_tensorboard = config_dict.get("use_tensorboard", True)
+        config.use_wandb = config_dict.get("use_wandb", False)
+        config.experiment_name = config_dict.get("experiment_name", "enhanced_maddpg")
+        config.use_shap = config_dict.get("use_shap", True)
+        config.use_attention_visualization = config_dict.get("use_attention_visualization", True)
         return config
-
+    
     @classmethod
     def load(cls, path: str) -> "Config":
         """Load configuration from JSON file"""
@@ -191,40 +251,45 @@ class Config:
             config_dict = json.load(f)
         return cls.from_dict(config_dict)
 
-
 # Default configuration instance
 default_config = Config()
 
-
 def get_state_dim(config: Config) -> int:
-    """Calculate state dimension based on configuration"""
+    """Calculate enhanced state dimension"""
     n_features_per_asset = (
-        2  # Historical returns (20-day, 60-day)
+        2  # Historical returns
         + 3  # RSI, MACD, MACD Signal
-        + 3  # Bollinger Bands (upper, middle, lower)
-        + 1  # Volatility (20-day rolling std)
+        + 3  # Bollinger Bands
+        + 1  # Volatility
     )
-    # Add macroeconomic features (VIX, Treasury yield)
-    macro_features = 2
-
-    # Per agent state = features for assigned assets + macro features
+    
+    # Add ESG if enabled
+    if config.env.use_esg:
+        n_features_per_asset += 1
+    
+    # Add sentiment if enabled
+    if config.env.use_sentiment:
+        n_features_per_asset += 1
+    
+    # Macro features
+    macro_features = 2  # VIX, Treasury yield
+    
+    # Per agent state
     assets_per_agent = config.env.n_assets // config.env.n_agents
     state_dim = n_features_per_asset * assets_per_agent + macro_features
-
+    
     return state_dim
 
-
 def get_action_dim(config: Config) -> int:
-    """Calculate action dimension (portfolio weights per agent)"""
+    """Calculate action dimension"""
     return config.env.n_assets // config.env.n_agents
 
-
 if __name__ == "__main__":
-    # Test configuration
     config = Config()
-    print("Configuration initialized successfully!")
+    print("Configuration initialized!")
     print(f"State dimension: {get_state_dim(config)}")
     print(f"Action dimension: {get_action_dim(config)}")
-    print(f"\nSector allocations:")
-    for sector, stocks in config.env.sector_allocations.items():
-        print(f"  {sector}: {len(stocks)} stocks - {', '.join(stocks[:3])}...")
+    print(f"Using Transformer: {config.network.use_transformer}")
+    print(f"Using ESG: {config.env.use_esg}")
+    print(f"Using Sentiment: {config.env.use_sentiment}")
+    print(f"Dynamic Diversity: {config.env.dynamic_diversity}")

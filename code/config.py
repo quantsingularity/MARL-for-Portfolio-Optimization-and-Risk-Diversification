@@ -1,199 +1,230 @@
 """
-Configuration file for MADDPG Portfolio Optimization
-Contains all hyperparameters, network architectures, and system settings
+Configuration management for MADDPG Portfolio Optimization
+Complete implementation based on research paper specifications
 """
 
-import torch
-from dataclasses import dataclass, field
-from typing import List, Optional
+import json
+from dataclasses import dataclass, asdict
+from typing import List, Dict, Any
+
 
 @dataclass
 class EnvironmentConfig:
-    """Environment configuration"""
-    # Asset and Agent Configuration
-    n_agents: int = 4  # As per paper: Tech, Healthcare, Finance, Energy/Commodities
-    n_assets: int = 30  # 30 large-cap US stocks from S&P 500
-    
-    # Agent-Asset Assignment (sector-based)
-    agent_asset_assignment: List[List[int]] = field(default_factory=lambda: [
-        list(range(0, 8)),    # Agent 1: Tech (8 stocks)
-        list(range(8, 15)),   # Agent 2: Healthcare (7 stocks)
-        list(range(15, 22)),  # Agent 3: Finance (7 stocks)
-        list(range(22, 30))   # Agent 4: Energy/Commodities (8 stocks)
-    ])
-    
-    # Capital Configuration
-    initial_capital: float = 1_000_000.0  # Initial capital per agent
-    
-    # Transaction Costs
-    transaction_cost: float = 0.001  # 0.1% (10 bps)
-    
-    # State Space Configuration
-    lookback_window_20: int = 20  # 20-day historical returns
-    lookback_window_60: int = 60  # 60-day historical returns
-    
-    # Reward Configuration
-    diversity_weight: float = 0.1  # λ = 0.1 (optimal from ablation study)
+    """Environment configuration matching paper specifications"""
+
+    n_agents: int = 4  # Tech, Healthcare, Finance, Energy/Commodities
+    n_assets: int = 30  # 30 S&P 500 stocks
+    initial_capital: float = 1_000_000  # $1M per agent
+    transaction_cost: float = 0.001  # 0.1% as per paper
     risk_free_rate: float = 0.02 / 252  # Daily risk-free rate (2% annual)
-    correlation_window: int = 30  # 30-day rolling correlation for diversity penalty
-    
-    # Episode Configuration
-    max_episode_steps: Optional[int] = None  # Will be set based on data length
+
+    # Diversity penalty weight (optimal from ablation study)
+    diversity_weight: float = 0.1  # λ = 0.1 (optimal)
+
+    # Rolling windows for calculations
+    correlation_window: int = 30  # 30-day window for diversity penalty
+    volatility_window: int = 20  # 20-day rolling volatility
+
+    # State space dimensions
+    lookback_short: int = 20  # Short-term historical returns
+    lookback_long: int = 60  # Long-term historical returns
+
+    # Technical indicators
+    rsi_period: int = 14
+    macd_fast: int = 12
+    macd_slow: int = 26
+    macd_signal: int = 9
+    bollinger_period: int = 20
+    bollinger_std: float = 2.0
+
+    # Asset allocation per agent (from paper)
+    sector_allocations: Dict[str, List[str]] = None
+
+    def __post_init__(self):
+        if self.sector_allocations is None:
+            # Exact allocation from paper
+            self.sector_allocations = {
+                "Tech": [
+                    "AAPL",
+                    "MSFT",
+                    "NVDA",
+                    "GOOGL",
+                    "META",
+                    "TSLA",
+                    "AVGO",
+                    "ADBE",
+                ],
+                "Healthcare": ["JNJ", "UNH", "PFE", "ABBV", "TMO", "MRK", "LLY"],
+                "Finance": ["JPM", "BAC", "V", "MA", "GS", "MS", "AXP"],
+                "Energy": ["XOM", "CVX", "COP", "SLB", "EOG", "PXD", "GLD", "SLV"],
+            }
 
 
 @dataclass
 class NetworkConfig:
-    """Neural network architecture configuration"""
-    # Actor Network (Policy)
-    actor_hidden_dims: List[int] = field(default_factory=lambda: [256, 256, 128])
-    actor_activation: str = 'relu'
-    actor_use_layer_norm: bool = True
-    
-    # Critic Network (Value)
-    critic_hidden_dims: List[int] = field(default_factory=lambda: [512, 256, 128, 64])
-    critic_activation: str = 'relu'
-    critic_use_layer_norm: bool = True
-    
-    # Initialization
-    weight_init: str = 'xavier_uniform'  # xavier_uniform, kaiming_normal, orthogonal
+    """Network architecture from paper Section 4.2"""
+
+    # Actor network: [256, 128, 64] with ReLU and BatchNorm
+    actor_hidden_dims: List[int] = None
+    actor_activation: str = "relu"
+    actor_use_batch_norm: bool = True
+    actor_output_activation: str = "softmax"  # Ensures weights sum to 1
+
+    # Critic network: [512, 256, 128] with ReLU and BatchNorm
+    critic_hidden_dims: List[int] = None
+    critic_activation: str = "relu"
+    critic_use_batch_norm: bool = True
+    critic_output_activation: str = "linear"
+
+    def __post_init__(self):
+        if self.actor_hidden_dims is None:
+            self.actor_hidden_dims = [256, 128, 64]
+        if self.critic_hidden_dims is None:
+            self.critic_hidden_dims = [512, 256, 128]
 
 
 @dataclass
 class TrainingConfig:
-    """Training configuration"""
-    # Episode Configuration
-    n_episodes: int = 300  # As per paper
-    
-    # Replay Buffer
-    buffer_capacity: int = 100_000
-    batch_size: int = 64
-    min_buffer_size: int = 1000  # Minimum samples before training starts
-    
-    # Learning Rates
+    """Training hyperparameters from paper Section 4.3"""
+
+    n_episodes: int = 300  # Training episodes
+    max_steps_per_episode: int = 252  # ~1 trading year
+
+    # Learning rates from paper
     lr_actor: float = 1e-4  # Actor learning rate
     lr_critic: float = 1e-3  # Critic learning rate
-    
-    # RL Hyperparameters
+
+    # RL hyperparameters
     gamma: float = 0.99  # Discount factor
-    tau: float = 0.01  # Soft update rate (Polyak averaging)
-    
+    tau: float = 0.01  # Polyak averaging rate for target networks
+    batch_size: int = 128  # Batch size from paper
+
+    # Experience replay
+    buffer_size: int = 1_000_000  # Replay buffer size
+    min_buffer_size: int = 10000  # Minimum before training starts
+
     # Exploration
-    initial_noise_scale: float = 0.2
-    noise_decay: float = 0.9995
-    min_noise_scale: float = 0.01
-    
-    # Gradient Clipping
-    max_grad_norm: float = 1.0
-    
-    # Entropy Regularization
-    entropy_coef: float = 0.01
-    
-    # Checkpoint Configuration
-    save_interval: int = 20  # Save model every N episodes
+    noise_std_start: float = 0.2  # Initial exploration noise
+    noise_std_end: float = 0.05  # Final exploration noise
+    noise_decay: float = 0.995  # Decay rate per episode
+
+    # Training schedule
+    update_every: int = 1  # Update frequency
+    updates_per_step: int = 1  # Number of updates per step
+
+    # Checkpointing
+    save_interval: int = 50  # Save model every N episodes
     eval_interval: int = 10  # Evaluate every N episodes
-    
-    # Device
-    device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
 @dataclass
 class DataConfig:
     """Data configuration"""
-    # Data Source
-    data_source: str = 'yfinance'  # 'yfinance', 'synthetic', 'csv'
-    
-    # Date Range
-    start_date: str = '2017-01-01'
-    end_date: str = '2024-12-31'
-    
-    # Train/Test Split
-    train_start: str = '2017-01-01'
-    train_end: str = '2022-12-31'
-    test_start: str = '2023-01-01'
-    test_end: str = '2024-12-31'
-    
-    # Asset Tickers (30 S&P 500 stocks by sector)
-    tickers: List[str] = field(default_factory=lambda: [
-        # Tech (8 stocks) - Agent 1
-        'AAPL', 'MSFT', 'NVDA', 'GOOGL', 'META', 'TSLA', 'ADBE', 'CRM',
-        # Healthcare (7 stocks) - Agent 2
-        'JNJ', 'PFE', 'ABBV', 'UNH', 'LLY', 'MRK', 'TMO',
-        # Finance (7 stocks) - Agent 3
-        'JPM', 'BAC', 'V', 'MA', 'WFC', 'GS', 'MS',
-        # Energy/Commodities (8 stocks) - Agent 4
-        'XOM', 'CVX', 'COP', 'SLB', 'MPC', 'VLO', 'PSX', 'HES'
-    ])
-    
-    # Technical Indicators
-    use_technical_indicators: bool = True
-    use_sentiment: bool = False  # Set to True if sentiment data available
-    use_macro_features: bool = True  # VIX, Treasury yields, etc.
+
+    data_source: str = "yfinance"  # 'yfinance', 'synthetic', or 'csv'
+    start_date: str = "2017-01-01"  # Training start (paper: 2017-2024)
+    end_date: str = "2024-12-31"  # Training end
+    train_ratio: float = 0.75  # 75% train, 25% test (2017-2022 train, 2023-2024 test)
+
+    # CSV data path (if using custom data)
+    csv_path: str = None
 
 
 @dataclass
-class EvaluationConfig:
-    """Evaluation configuration"""
-    # Number of evaluation episodes
-    n_eval_episodes: int = 10
-    
-    # Baseline strategies to compare
-    baselines: List[str] = field(default_factory=lambda: [
-        'equal_weight',
-        'random',
-        'risk_parity',
-        'mean_variance',
-        'single_agent_ddpg',
-        'maddpg_no_diversity'
-    ])
-
-
-# Global configuration instance
 class Config:
-    """Main configuration class"""
-    def __init__(self):
-        self.env = EnvironmentConfig()
-        self.network = NetworkConfig()
-        self.training = TrainingConfig()
-        self.data = DataConfig()
-        self.evaluation = EvaluationConfig()
-    
-    def to_dict(self):
+    """Master configuration class"""
+
+    env: EnvironmentConfig = None
+    network: NetworkConfig = None
+    training: TrainingConfig = None
+    data: DataConfig = None
+
+    # Experiment settings
+    seed: int = 42
+    device: str = "cpu"  # 'cuda' or 'cpu'
+    num_workers: int = 4  # For data loading
+
+    def __post_init__(self):
+        if self.env is None:
+            self.env = EnvironmentConfig()
+        if self.network is None:
+            self.network = NetworkConfig()
+        if self.training is None:
+            self.training = TrainingConfig()
+        if self.data is None:
+            self.data = DataConfig()
+
+    def to_dict(self) -> Dict[str, Any]:
         """Convert config to dictionary"""
         return {
-            'environment': self.env.__dict__,
-            'network': self.network.__dict__,
-            'training': self.training.__dict__,
-            'data': self.data.__dict__,
-            'evaluation': self.evaluation.__dict__
+            "env": asdict(self.env),
+            "network": asdict(self.network),
+            "training": asdict(self.training),
+            "data": asdict(self.data),
+            "seed": self.seed,
+            "device": self.device,
+            "num_workers": self.num_workers,
         }
-    
+
     def save(self, path: str):
         """Save configuration to JSON file"""
-        import json
-        with open(path, 'w') as f:
+        with open(path, "w") as f:
             json.dump(self.to_dict(), f, indent=2)
-    
+
     @classmethod
-    def load(cls, path: str):
-        """Load configuration from JSON file"""
-        import json
-        with open(path, 'r') as f:
-            config_dict = json.load(f)
-        
+    def from_dict(cls, config_dict: Dict[str, Any]) -> "Config":
+        """Load configuration from dictionary"""
         config = cls()
-        for key, value in config_dict.get('environment', {}).items():
-            setattr(config.env, key, value)
-        for key, value in config_dict.get('network', {}).items():
-            setattr(config.network, key, value)
-        for key, value in config_dict.get('training', {}).items():
-            setattr(config.training, key, value)
-        for key, value in config_dict.get('data', {}).items():
-            setattr(config.data, key, value)
-        for key, value in config_dict.get('evaluation', {}).items():
-            setattr(config.evaluation, key, value)
-        
+        config.env = EnvironmentConfig(**config_dict.get("env", {}))
+        config.network = NetworkConfig(**config_dict.get("network", {}))
+        config.training = TrainingConfig(**config_dict.get("training", {}))
+        config.data = DataConfig(**config_dict.get("data", {}))
+        config.seed = config_dict.get("seed", 42)
+        config.device = config_dict.get("device", "cpu")
+        config.num_workers = config_dict.get("num_workers", 4)
         return config
 
+    @classmethod
+    def load(cls, path: str) -> "Config":
+        """Load configuration from JSON file"""
+        with open(path, "r") as f:
+            config_dict = json.load(f)
+        return cls.from_dict(config_dict)
 
-# Default configuration
+
+# Default configuration instance
 default_config = Config()
+
+
+def get_state_dim(config: Config) -> int:
+    """Calculate state dimension based on configuration"""
+    n_features_per_asset = (
+        2  # Historical returns (20-day, 60-day)
+        + 3  # RSI, MACD, MACD Signal
+        + 3  # Bollinger Bands (upper, middle, lower)
+        + 1  # Volatility (20-day rolling std)
+    )
+    # Add macroeconomic features (VIX, Treasury yield)
+    macro_features = 2
+
+    # Per agent state = features for assigned assets + macro features
+    assets_per_agent = config.env.n_assets // config.env.n_agents
+    state_dim = n_features_per_asset * assets_per_agent + macro_features
+
+    return state_dim
+
+
+def get_action_dim(config: Config) -> int:
+    """Calculate action dimension (portfolio weights per agent)"""
+    return config.env.n_assets // config.env.n_agents
+
+
+if __name__ == "__main__":
+    # Test configuration
+    config = Config()
+    print("Configuration initialized successfully!")
+    print(f"State dimension: {get_state_dim(config)}")
+    print(f"Action dimension: {get_action_dim(config)}")
+    print(f"\nSector allocations:")
+    for sector, stocks in config.env.sector_allocations.items():
+        print(f"  {sector}: {len(stocks)} stocks - {', '.join(stocks[:3])}...")

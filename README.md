@@ -204,8 +204,8 @@ marl-portfolio/
 
 ```bash
 # Clone repository
-git clone <repository-url>
-cd marl-portfolio
+git clone https://github.com/quantsingularity/MARL-for-Portfolio-Optimization-and-Risk-Diversification
+cd MARL-for-Portfolio-Optimization-and-Risk-Diversification
 
 # Create virtual environment
 python -m venv venv

@@ -1,4 +1,4 @@
-# 🚀 MARL Portfolio Optimization - Production System v1.0
+# 🚀 MARL Portfolio Optimization - Production System
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://www.docker.com/)

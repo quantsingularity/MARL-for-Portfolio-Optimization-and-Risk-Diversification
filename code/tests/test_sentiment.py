@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def test_sentiment_analyzer():
     """Test sentiment analyzer"""
-    from code.features.sentiment_analyzer import FinBERTSentimentAnalyzer
+    from features.sentiment_analyzer import FinBERTSentimentAnalyzer
 
     analyzer = FinBERTSentimentAnalyzer()
     sentiment = analyzer.analyze_ticker_sentiment("AAPL")

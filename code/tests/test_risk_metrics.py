@@ -10,7 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def test_sharpe_ratio():
     """Test Sharpe ratio calculation"""
-    from code.risk_management.risk_metrics import RiskMetricsCalculator
+    from risk_management.risk_metrics import RiskMetricsCalculator
 
     calc = RiskMetricsCalculator()
     returns = np.random.randn(252) * 0.01
@@ -20,7 +20,7 @@ def test_sharpe_ratio():
 
 def test_cvar():
     """Test CVaR calculation"""
-    from code.risk_management.risk_metrics import RiskMetricsCalculator
+    from risk_management.risk_metrics import RiskMetricsCalculator
 
     calc = RiskMetricsCalculator(cvar_alpha=0.95)
 

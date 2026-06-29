@@ -10,7 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def test_transformer_actor():
     """Test transformer actor creation"""
-    from code.models.transformer_actor import TransformerActor
+    from models.transformer_actor import TransformerActor
 
     model = TransformerActor(state_dim=100, action_dim=10)
     state = torch.randn(32, 100)
@@ -21,7 +21,7 @@ def test_transformer_actor():
 
 def test_transformer_critic():
     """Test transformer critic creation"""
-    from code.models.transformer_critic import TransformerCritic
+    from models.transformer_critic import TransformerCritic
 
     model = TransformerCritic(global_state_dim=400, total_action_dim=40)
     state = torch.randn(32, 400)

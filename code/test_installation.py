@@ -1,8 +1,11 @@
 """
+import numpy as np
 Quick test script to verify installation and functionality
 """
 
 import sys
+
+import numpy as np
 
 
 def test_imports():
@@ -65,8 +68,12 @@ def test_basic_functionality():
         obs = env.reset()
         print("✓ Environment reset")
 
-        # Test step
-        actions = [agent_obs * 0 + 1.0 / len(agent_obs) for agent_obs in obs]
+        # Test step: build uniform-weight actions of the correct (per-agent
+        # asset) dimension, not the observation dimension.
+        actions = [
+            np.ones_like(env.agent_weights[i]) / len(env.agent_weights[i])
+            for i in range(env.n_agents)
+        ]
         next_obs, rewards, done, info = env.step(actions)
         print("✓ Environment step executed")
 

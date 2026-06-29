@@ -4,7 +4,7 @@
     "n_assets": 20,
     "initial_capital": 1000000,
     "transaction_cost": 0.001,
-    "risk_free_rate": 7.936507936507937e-05,
+    "risk_free_rate": 7.936507936507937e-5,
     "diversity_weight": 0.1,
     "dynamic_diversity": false,
     "diversity_weight_range": [0.05, 0.2],

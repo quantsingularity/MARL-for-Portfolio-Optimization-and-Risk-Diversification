@@ -15,12 +15,17 @@ import requests
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Configure logging
+# Configure logging. The log directory is configurable via the LOG_DIR
+# environment variable and defaults to a local ``logs/`` directory so the module
+# imports cleanly outside the Docker container (where /app/logs does not exist).
+LOG_DIR = os.environ.get("LOG_DIR", os.path.join(os.getcwd(), "logs"))
+os.makedirs(LOG_DIR, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("/app/logs/risk_monitor.log"),
+        logging.FileHandler(os.path.join(LOG_DIR, "risk_monitor.log")),
         logging.StreamHandler(),
     ],
 )
@@ -241,16 +246,22 @@ class RiskMonitor:
         # - SMS for critical alerts
         # - Dashboard notifications
 
-    def save_alerts_log(self, output_path: str = "/app/logs/risk_alerts.json"):
+    def save_alerts_log(self, output_path: str = None):
         """Save alerts to log file"""
+        if output_path is None:
+            output_path = os.path.join(LOG_DIR, "risk_alerts.json")
         try:
             with open(output_path, "w") as f:
                 json.dump(self.alerts[-1000:], f, indent=2)  # Keep last 1000 alerts
         except Exception as e:
             logger.error(f"Error saving alerts log: {str(e)}")
 
-    def generate_risk_report(self, output_dir: str = "/app/reports"):
+    def generate_risk_report(self, output_dir: str = None):
         """Generate daily risk report"""
+        if output_dir is None:
+            output_dir = os.environ.get(
+                "REPORT_DIR", os.path.join(os.getcwd(), "reports")
+            )
         os.makedirs(output_dir, exist_ok=True)
 
         report_date = datetime.now().strftime("%Y-%m-%d")

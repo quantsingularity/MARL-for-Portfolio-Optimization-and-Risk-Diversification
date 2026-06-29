@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 def test_esg_provider():
     """Test ESG provider"""
-    from code.features.esg_provider import ESGProvider
+    from features.esg_provider import ESGProvider
 
     provider = ESGProvider()
     score = provider.get_esg_score("AAPL")
@@ -17,7 +17,7 @@ def test_esg_provider():
 
 def test_esg_filtering():
     """Test ESG filtering"""
-    from code.features.esg_provider import ESGProvider
+    from features.esg_provider import ESGProvider
 
     provider = ESGProvider(min_score=70.0)
     tickers = ["AAPL", "MSFT", "GOOGL", "BTC-USD"]

@@ -11,10 +11,10 @@ import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from code.config import Config, get_action_dim, get_state_dim
-from code.data_loader import MarketDataLoader
-from code.environment import MultiAgentPortfolioEnv
-from code.maddpg_agent import MADDPGAgent, MADDPGTrainer
+from config import Config, get_action_dim, get_state_dim
+from data_loader import MarketDataLoader
+from environment import MultiAgentPortfolioEnv
+from maddpg_agent import MADDPGAgent, MADDPGTrainer
 
 
 class TestConfig:
@@ -27,7 +27,10 @@ class TestConfig:
         assert config.network.use_transformer
 
     def test_lite_config(self):
-        config = Config.load("configs/marl_lite.json")
+        config_path = os.path.join(
+            os.path.dirname(__file__), "..", "..", "configs", "marl_lite.json"
+        )
+        config = Config.load(config_path)
         assert not config.network.use_transformer
         assert not config.env.use_esg
 
@@ -90,6 +93,12 @@ class TestEnvironment:
         config.data.data_source = "synthetic"
         config.env.n_agents = 2
         config.env.n_assets = 4
+        # The environment maps one sector -> one agent, so the sector layout
+        # must match n_agents/n_assets for a consistent 2-agent, 2-asset env.
+        config.env.sector_allocations = {
+            "SectorA": ["A1", "A2"],
+            "SectorB": ["B1", "B2"],
+        }
 
         loader = MarketDataLoader(config)
         data = loader.prepare_environment_data()
@@ -238,6 +247,10 @@ class TestIntegration:
         config.data.data_source = "synthetic"
         config.env.n_agents = 2
         config.env.n_assets = 4
+        config.env.sector_allocations = {
+            "SectorA": ["A1", "A2"],
+            "SectorB": ["B1", "B2"],
+        }
         config.network.use_transformer = False
         config.training.n_episodes = 2
 
@@ -290,9 +303,8 @@ class TestAPI:
 
     @pytest.fixture
     def client(self):
-
-        from code.api.main import app
-
+        pytest.importorskip("fastapi", reason="fastapi not installed")
+        from api.main import app
         from fastapi.testclient import TestClient
 
         return TestClient(app)
@@ -315,7 +327,7 @@ class TestFeatureAnalysis:
     """Test feature importance analysis"""
 
     def test_feature_groups(self):
-        from code.analysis.feature_importance import FeatureImportanceAnalyzer
+        from analysis.feature_importance import FeatureImportanceAnalyzer
 
         config = Config()
         analyzer = FeatureImportanceAnalyzer(config, n_episodes=2)
@@ -329,7 +341,7 @@ class TestRebalancingOptimization:
     """Test rebalancing optimization"""
 
     def test_frequency_definitions(self):
-        from code.analysis.rebalancing_optimization import RebalancingOptimizer
+        from analysis.rebalancing_optimization import RebalancingOptimizer
 
         config = Config()
         config.data.data_source = "synthetic"

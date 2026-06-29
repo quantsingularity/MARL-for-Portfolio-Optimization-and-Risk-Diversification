@@ -221,7 +221,9 @@ def demo(config: Config, save_dir: str):
     print("=" * 80)
 
     config.training.n_episodes = 5
-    config.data.data_source = "synthetic"
+    config.data.data_source = (
+        "yfinance"  # real data; loader falls back to synthetic if offline
+    )
 
     trainer, history = train(config, save_dir)
 
@@ -245,7 +247,7 @@ def main():
     parser.add_argument(
         "--data-source",
         type=str,
-        default="synthetic",
+        default="yfinance",
         choices=["yfinance", "synthetic", "csv"],
         help="Data source selection",
     )

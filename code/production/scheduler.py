@@ -9,17 +9,33 @@ import os
 import sys
 
 import requests
-from apscheduler.schedulers.blocking import BlockingScheduler
-from apscheduler.triggers.cron import CronTrigger
-from apscheduler.triggers.interval import IntervalTrigger
+
+try:
+    from apscheduler.schedulers.blocking import BlockingScheduler
+    from apscheduler.triggers.cron import CronTrigger
+    from apscheduler.triggers.interval import IntervalTrigger
+except ImportError as _exc:  # pragma: no cover - optional production dependency
+    BlockingScheduler = None
+    CronTrigger = None
+    IntervalTrigger = None
+    _APSCHEDULER_IMPORT_ERROR = _exc
+else:
+    _APSCHEDULER_IMPORT_ERROR = None
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Configure logging
+# Configure logging. Log directory is configurable via LOG_DIR and created if
+# missing so the module imports cleanly outside the Docker container.
+LOG_DIR = os.environ.get("LOG_DIR", os.path.join(os.getcwd(), "logs"))
+os.makedirs(LOG_DIR, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("/app/logs/scheduler.log"), logging.StreamHandler()],
+    handlers=[
+        logging.FileHandler(os.path.join(LOG_DIR, "scheduler.log")),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -28,6 +44,11 @@ class RebalancingScheduler:
     """Scheduler for automated portfolio rebalancing"""
 
     def __init__(self, api_url: str = "http://localhost:8000"):
+        if BlockingScheduler is None:  # pragma: no cover - optional dependency
+            raise ImportError(
+                "apscheduler is required for the rebalancing scheduler. "
+                "Install it with `pip install apscheduler`."
+            ) from _APSCHEDULER_IMPORT_ERROR
         self.api_url = api_url
         self.scheduler = BlockingScheduler()
         self.portfolios = {}

@@ -9,7 +9,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 
 
 def test_shap_analyzer_basic():
-    from code.interpretability.shap_analyzer import SHAPAnalyzer
+    from interpretability.shap_analyzer import SHAPAnalyzer
 
     states = np.random.randn(5, 10)
     analyzer = SHAPAnalyzer()
@@ -21,7 +21,7 @@ def test_shap_analyzer_basic():
 
 
 def test_model_explainer_basic():
-    from code.interpretability.explainer import ModelExplainer
+    from interpretability.explainer import ModelExplainer
 
     state = np.random.randn(8)
     action = np.ones(4) / 4

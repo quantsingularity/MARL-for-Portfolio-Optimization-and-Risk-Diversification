@@ -3,8 +3,6 @@
 import warnings
 from typing import Any, Callable, Dict
 
-import optuna
-
 warnings.filterwarnings("ignore")
 
 
@@ -16,6 +14,13 @@ class HyperparameterOptimizer:
 
     def optimize(self, objective_func: Callable, param_space: Dict[str, Any]) -> Dict:
         """Run Optuna optimization"""
+        try:
+            import optuna
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            raise ImportError(
+                "optuna is required for hyperparameter optimization. "
+                "Install it with `pip install optuna`."
+            ) from exc
         self.study = optuna.create_study(direction=self.direction)
         self.study.optimize(objective_func, n_trials=self.n_trials)
         return self.study.best_params

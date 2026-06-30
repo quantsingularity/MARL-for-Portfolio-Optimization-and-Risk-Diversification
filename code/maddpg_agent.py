@@ -3,6 +3,23 @@ MADDPG Agent Implementation
 Implements the complete MADDPG algorithm from the paper
 """
 
+# === stdlib 'code' pin (Python 3.13 pdb compatibility) -- auto-added ===
+import sys as _sys
+
+if not hasattr(_sys.modules.get("code"), "InteractiveConsole"):
+    import importlib.util as _ilu
+    import os as _os
+    import sysconfig as _sc
+
+    _sp = _sc.get_paths()["stdlib"]
+    _cspec = _ilu.spec_from_file_location("code", _os.path.join(_sp, "code.py"))
+    if _cspec is not None:
+        _cmod = _ilu.module_from_spec(_cspec)
+        _cspec.loader.exec_module(_cmod)
+        _sys.modules["code"] = _cmod
+    del _ilu, _os, _sc, _sp, _cspec
+# === end stdlib 'code' pin ===
+
 import random
 from collections import deque
 from typing import Dict, List
@@ -436,9 +453,10 @@ class MADDPGTrainer:
             len(env._get_agent_observation(i)) for i in range(self.n_agents)
         ]
         self.action_dims = env.assets_per_agent
-        self.global_state_dim = (
-            sum(self.state_dims) + self.n_agents
-        )  # Add capital ratios
+        # Global state for the centralized critic is the concatenation of all
+        # agent observations (see _flatten_states). The critic is only ever fed
+        # _flatten_states output, so its input dim must match that exactly.
+        self.global_state_dim = sum(self.state_dims)
         self.total_action_dim = sum(self.action_dims)
 
         # Create agents

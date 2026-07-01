@@ -58,11 +58,17 @@ docker-compose --profile production up -d
 chmod +x setup.sh && ./setup.sh
 source venv/bin/activate
 
-python code/main.py --mode demo
-python code/main.py --mode train --config configs/marl_lite.json
+python portfolio/main.py --mode demo
+python portfolio/main.py --mode train --config configs/marl_lite.json
 ```
 
 ---
+
+<!-- output-note -->
+
+### Output
+
+Console output stays readable: benign third-party warnings and library progress bars are suppressed, so only meaningful log lines remain. Each run finishes with a clean, aligned summary block reporting episodes trained, number of agents and the best Sharpe ratio achieved.
 
 ## Model Configurations
 
@@ -89,30 +95,30 @@ MARL-Lite achieves 80% of the full model Sharpe Ratio at 35% of the training cos
 
 ## Repository Structure
 
-| Path                     | Description                                                 |
-| :----------------------- | :---------------------------------------------------------- |
-| `code/`                  | Training loop, MADDPG implementation, portfolio environment |
-| `code/models/`           | Transformer actor, MLP critic, regime detector              |
-| `code/risk_management/`  | Dynamic diversity, VaR, CVaR, risk metrics                  |
-| `code/features/`         | ESG provider, FinBERT sentiment analyzer                    |
-| `code/api/`              | FastAPI endpoints for model serving and rebalancing         |
-| `code/production/`       | Scheduler and real-time risk monitor services               |
-| `code/analysis/`         | Feature importance, rebalancing optimization scripts        |
-| `code/interpretability/` | Feature attribution and decision rationale                  |
-| `configs/`               | JSON configs for default, MARL-Lite, and Transformer        |
-| `tests/`                 | Pytest suite with 82%+ coverage                             |
-| `notebooks/`             | Feature analysis and model interpretation notebooks         |
+| Path                          | Description                                                 |
+| :---------------------------- | :---------------------------------------------------------- |
+| `portfolio/`                  | Training loop, MADDPG implementation, portfolio environment |
+| `portfolio/models/`           | Transformer actor, MLP critic, regime detector              |
+| `portfolio/risk_management/`  | Dynamic diversity, VaR, CVaR, risk metrics                  |
+| `portfolio/features/`         | ESG provider, FinBERT sentiment analyzer                    |
+| `portfolio/api/`              | FastAPI endpoints for model serving and rebalancing         |
+| `portfolio/production/`       | Scheduler and real-time risk monitor services               |
+| `portfolio/analysis/`         | Feature importance, rebalancing optimization scripts        |
+| `portfolio/interpretability/` | Feature attribution and decision rationale                  |
+| `configs/`                    | JSON configs for default, MARL-Lite, and Transformer        |
+| `tests/`                      | Pytest suite with 82%+ coverage                             |
+| `notebooks/`                  | Feature analysis and model interpretation notebooks         |
 
 ---
 
 ## Analysis Tools
 
-| Script                                      | Purpose                                                     | Output                          |
-| :------------------------------------------ | :---------------------------------------------------------- | :------------------------------ |
-| `code/analysis/feature_importance.py`       | Ablation study ranking features by Sharpe Ratio impact      | `results/feature_analysis/`     |
-| `code/analysis/rebalancing_optimization.py` | Optimal rebalancing frequency vs. transaction cost analysis | `results/rebalancing_analysis/` |
-| `code/benchmarks/run_benchmarks.py`         | Full, Lite, and baseline model comparison                   | `results/benchmarks/`           |
-| `code/interpretability/explainer.py`        | Feature attribution map for individual decisions            | Used by API                     |
+| Script                                           | Purpose                                                     | Output                          |
+| :----------------------------------------------- | :---------------------------------------------------------- | :------------------------------ |
+| `portfolio/analysis/feature_importance.py`       | Ablation study ranking features by Sharpe Ratio impact      | `results/feature_analysis/`     |
+| `portfolio/analysis/rebalancing_optimization.py` | Optimal rebalancing frequency vs. transaction cost analysis | `results/rebalancing_analysis/` |
+| `portfolio/benchmarks/run_benchmarks.py`         | Full, Lite, and baseline model comparison                   | `results/benchmarks/`           |
+| `portfolio/interpretability/explainer.py`        | Feature attribution map for individual decisions            | Used by API                     |
 
 ---
 

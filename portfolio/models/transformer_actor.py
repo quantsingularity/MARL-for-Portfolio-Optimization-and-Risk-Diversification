@@ -3,23 +3,6 @@ Transformer-based Actor Network
 Implements multi-head self-attention for temporal pattern recognition in financial data
 """
 
-# === stdlib 'code' pin (Python 3.13 pdb compatibility) -- auto-added ===
-import sys as _sys
-
-if not hasattr(_sys.modules.get("code"), "InteractiveConsole"):
-    import importlib.util as _ilu
-    import os as _os
-    import sysconfig as _sc
-
-    _sp = _sc.get_paths()["stdlib"]
-    _cspec = _ilu.spec_from_file_location("code", _os.path.join(_sp, "code.py"))
-    if _cspec is not None:
-        _cmod = _ilu.module_from_spec(_cspec)
-        _cspec.loader.exec_module(_cmod)
-        _sys.modules["code"] = _cmod
-    del _ilu, _os, _sc, _sp, _cspec
-# === end stdlib 'code' pin ===
-
 import math
 from typing import Optional
 

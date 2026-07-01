@@ -26,7 +26,7 @@ services:
   # Training service (CPU)
   marl-train-cpu:
     extends: marl-base
-    command: python code/main.py --mode train --episodes 300
+    command: python portfolio/main.py --mode train --episodes 300
     profiles:
       - train
       - train-cpu
@@ -39,7 +39,7 @@ services:
       args:
         COMPUTE_TYPE: gpu
     image: marl-portfolio:gpu
-    command: python code/main.py --mode train --episodes 300
+    command: python portfolio/main.py --mode train --episodes 300
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -62,7 +62,7 @@ services:
   # MARL-Lite training (simplified)
   marl-lite-train:
     extends: marl-base
-    command: python code/main.py --mode train --config configs/marl_lite.json
+    command: python portfolio/main.py --mode train --config configs/marl_lite.json
     profiles:
       - lite
       - train-lite
@@ -70,7 +70,7 @@ services:
   # Feature importance analysis
   feature-analysis:
     extends: marl-base
-    command: python code/analysis/feature_importance.py
+    command: python portfolio/analysis/feature_importance.py
     profiles:
       - analysis
       - feature-analysis
@@ -78,7 +78,7 @@ services:
   # Rebalancing optimization
   rebalancing-analysis:
     extends: marl-base
-    command: python code/analysis/rebalancing_optimization.py
+    command: python portfolio/analysis/rebalancing_optimization.py
     profiles:
       - analysis
       - rebalancing
@@ -96,7 +96,7 @@ services:
   # Dashboard service
   dashboard:
     extends: marl-base
-    command: python code/dashboard/app.py --host 0.0.0.0 --port 8050
+    command: python portfolio/dashboard/app.py --host 0.0.0.0 --port 8050
     ports:
       - "8050:8050"
     profiles:
@@ -106,7 +106,7 @@ services:
   # Scheduler service (for production rebalancing)
   scheduler:
     extends: marl-base
-    command: python code/production/scheduler.py
+    command: python portfolio/production/scheduler.py
     depends_on:
       - api
     profiles:
@@ -115,7 +115,7 @@ services:
   # Risk monitoring service
   risk-monitor:
     extends: marl-base
-    command: python code/production/risk_monitor.py
+    command: python portfolio/production/risk_monitor.py
     depends_on:
       - api
     profiles:
@@ -131,7 +131,7 @@ services:
   # Benchmarking service
   benchmark:
     extends: marl-base
-    command: python code/benchmarks/run_benchmarks.py
+    command: python portfolio/benchmarks/run_benchmarks.py
     profiles:
       - benchmark
 

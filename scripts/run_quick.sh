@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 echo "=========================================="
 echo "MARL Portfolio Optimization - Quick Run"
 echo "=========================================="
-export PYTHONPATH="$(pwd)/code:${PYTHONPATH}"
-python code/main.py --mode train --data-source synthetic --episodes 20 --seed 42
+export PYTHONPATH="$(pwd)/portfolio:${PYTHONPATH}"
+python portfolio/main.py --mode train --data-source synthetic --episodes 20 --seed 42
 echo ""
-echo "Quick run complete. Results in code/results/"
+echo "Quick run complete. Results in portfolio/results/"
